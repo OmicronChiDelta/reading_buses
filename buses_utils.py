@@ -43,4 +43,8 @@ def recover_geometry(url_geometry):
     
         for j, f in enumerate(fields):
             df_geometry.at[i, f] = data[j] 
+            
+    #Coerce latitude and longitude to floats
+    df_geometry['longitude'] = df_geometry['longitude'].astype(float) 
+    df_geometry['latitude'] = df_geometry['latitude'].astype(float) 
     return df_geometry
