@@ -17,11 +17,12 @@ import numpy as np
 #    return df_times
 
 
-def parse_url(url):
+def parse_url(url, field_subset):
     '''
     Function to obtain a dataframe of data from Reading Buses API dumps
     Input:
         url: a url, structured according to the API schema
+        field_subset: an optional list containing a subset of fields to extract
     Returns:
         df_op: The dataframe of data contained in the raw dump file
     '''
@@ -38,6 +39,10 @@ def parse_url(url):
     fields = re.findall(regex_field, records[0])
     fields = [f.replace(':', '').replace('"', '').replace(',', '') for f in fields]
     
+    if field_subset != 'ALL':
+        desired_indices = [fields.index(i) for i in field_subset]
+        fields = field_subset
+    
     #Set up space to save time
     df_op = pd.DataFrame(columns=fields, data=[['' for i in fields] for j in records])
     
@@ -45,7 +50,11 @@ def parse_url(url):
     for i, r in enumerate(records):    
         data  = re.findall(regex_data, r)
         data  = [d.replace(':', '').replace('"', '').replace(',', '') for d in data]
-    
+        
+        #Save time by stripping out only the data we want
+        if field_subset != 'ALL':
+            data  = [data[i] for i in desired_indices]
+        
         for j, f in enumerate(fields):
             df_op.at[i, f] = data[j] 
     return df_op
@@ -63,7 +72,7 @@ def cleanse_geometry(url_geometry, only_RGB=True, only_true_coords=True):
         of stops, the route to which they belong etc. 
     '''
     #Obtain data
-    df_geometry = parse_url(url_geometry)
+    df_geometry = parse_url(url_geometry, 'ALL')
             
     #Coerce latitude and longitude to floats
     df_geometry['longitude'] = df_geometry['longitude'].astype(float) 

@@ -5,6 +5,7 @@ Various pieces of analysis for the Reading Buses datasets
 @author: Alex White
 """
 
+import numpy as np
 import pandas as pd
 import sys
 import matplotlib.pyplot as plt
@@ -24,7 +25,7 @@ url_geometry = '{}/busstops?key={}'.format(api_base, api_key)
 url_services = '{}/services?key={}'.format(api_base, api_key)
 only_RGB = True
 only_valid_latlong = True
-tracking_subset = ['LineRef', 'VehicleCode', 'DriverCode', 'LocationCode', 'LiveJourneyId', 'JourneyId',
+tracking_subset = ['LineRef', 'VehicleCode', 'DriverCode', 'LocationCode', 'LiveJourneyId', 'JourneyId', 'ScheduledStartTime',
                    'JourneyPattern', 'Sequence', 'ScheduledArrivalTime', 'ScheduledDepartureTime', 
                    'ArrivalTime', 'DepartureTime', 'ScheduledHeadway', 'ActualHeadway']
 
@@ -47,14 +48,59 @@ track_date = '2020-01-01'
 track_service = '33'
 url_tracking = '{}/trackingHistory?key={}&service={}&date={}&vehicle=&location='.format(api_base, api_key, track_service, track_date)
 
-df_tracking = parse_url(url_tracking)
-df_tracking = df_tracking[tracking_subset]
+df_tracking = parse_url(url_tracking, tracking_subset)
 
-#Ensure datetimes
+#Cleanse types
+df_tracking['ScheduledStartTime']     = df_tracking['ScheduledStartTime'].apply(lambda x: pd.to_datetime(x, format='%Y-%m-%d %H%M%S', errors='coerce'))
 df_tracking['ScheduledArrivalTime']   = df_tracking['ScheduledArrivalTime'].apply(lambda x: pd.to_datetime(x, format='%Y-%m-%d %H%M%S', errors='coerce'))
 df_tracking['ScheduledDepartureTime'] = df_tracking['ScheduledDepartureTime'].apply(lambda x: pd.to_datetime(x, format='%Y-%m-%d %H%M%S',  errors='coerce'))
 df_tracking['ArrivalTime']            = df_tracking['ArrivalTime'].apply(lambda x: pd.to_datetime(x, format='%Y-%m-%d %H%M%S',  errors='coerce'))
 df_tracking['DepartureTime']          = df_tracking['DepartureTime'].apply(lambda x: pd.to_datetime(x, format='%Y-%m-%d %H%M%S',  errors='coerce'))
+df_tracking['Sequence']               = df_tracking['Sequence'].astype(int) 
+
+
+
+#%% Time differences in decimal seconds
+df_tracking['dwell']           = (df_tracking['DepartureTime'] - df_tracking['ArrivalTime']).astype('timedelta64[s]')  
+df_tracking['arrival_delta']   = (df_tracking['ArrivalTime'] - df_tracking['ScheduledArrivalTime']).astype('timedelta64[s]')  
+df_tracking['departure_delta'] = (df_tracking['DepartureTime'] - df_tracking['ScheduledDepartureTime']).astype('timedelta64[s]')  
+
+
+
+#%% On average, how do the deltas change along a given journey?
+agg_journey = df_tracking.groupby(['JourneyPattern', 'Sequence']).agg({'dwell':'mean', 'arrival_delta':'mean', 'departure_delta':'mean'}).reset_index()
+agg_journey.dropna(inplace=True)
+agg_journey.sort_values(by=['JourneyPattern', 'Sequence'], inplace=True)
+
+
+
+#%% On average, how do the deltas for a given journey change over the day?
+agg_time = df_tracking.groupby(['JourneyPattern', 'ScheduledStartTime']).agg({'dwell':'mean', 'arrival_delta':'mean', 'departure_delta':'mean'}).reset_index()
+agg_time.dropna(inplace=True)
+agg_time.sort_values(by=['JourneyPattern', 'ScheduledStartTime'], inplace=True)
+
+
+
+#%% Visualise time series for dwell vs. progress along each journey
+journey_agg = agg_time.groupby('JourneyPattern')
+fig, ax = plt.subplots()
+for i in journey_agg:
+    ax.plot(i[1]['dwell'].values, label=i[0])
+ax.set_xlabel('Time index')
+ax.set_ylabel('Mean dwell time / seconds')
+plt.legend()
+
+
+
+#%% Visualise time series for dwell vs. progress along each journey
+time_agg = agg_journey.groupby('JourneyPattern')
+fig, ax = plt.subplots()
+for i in journey_agg:
+    x = list(i[1]['Sequence'].values)
+    ax.plot([100*(j/np.max(x)) for j in x], i[1]['dwell'].values, label=i[0])
+ax.set_xlabel('% progress through journey')
+ax.set_ylabel('Mean dwell time / seconds')
+plt.legend()
 
 
 
