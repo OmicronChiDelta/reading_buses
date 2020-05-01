@@ -8,7 +8,6 @@ Functions to assist in analysing Reading Buses open source datasets
 import pandas as pd
 import urllib
 import re
-import numpy as np
 
 
 def parse_url(url, field_subset):
@@ -17,7 +16,6 @@ def parse_url(url, field_subset):
     Input:
         url: a url, structured according to the API schema
         field_subset: an optional list containing a subset of fields to extract
-        do_subset: boolean which if true, will only return the fields in field_subset
     Returns:
         df_op: The dataframe of data contained in the raw dump file
     '''
@@ -29,11 +27,11 @@ def parse_url(url, field_subset):
     
     for f in field_subset:
         #Search directly for the fields of interest
-        regex_data = '\"{}\":.*?,|\"{}\":.*?$'.format(f, f)
+        regex_data = '\"{}\":.*?,|\"{}\":.*?'.format(f, f) + '}'
         data = re.findall(regex_data, string_dump)
         
         #Remove rubbish
-        data  = [d.replace(f, '').replace(':', '').replace('"', '').replace(',', '') for d in data]
+        data  = [d.replace(f, '').replace(':', '').replace('"', '').replace(',', '').replace('}', '') for d in data]
         
         #Push into data frame. This only works because the data is so clean. Previous line-by-line is more general. 
         df_op[f] = data
@@ -53,7 +51,7 @@ def cleanse_geometry(url_geometry, field_subset, only_RGB=True, only_true_coords
         of stops, the route to which they belong etc. 
     '''
     #Obtain data
-    df_geometry = parse_url(url_geometry, [], False)
+    df_geometry = parse_url(url_geometry, field_subset)
             
     #Coerce latitude and longitude to floats
     df_geometry['longitude'] = df_geometry['longitude'].astype(float) 
