@@ -11,7 +11,7 @@ import re
 import numpy as np
 
 
-def parse_url(url, field_subset, do_subset):
+def parse_url(url, field_subset):
     '''
     Function to obtain a dataframe of data from Reading Buses API dumps
     Input:
@@ -21,42 +21,27 @@ def parse_url(url, field_subset, do_subset):
     Returns:
         df_op: The dataframe of data contained in the raw dump file
     '''
+    #Get data from the web
     dump = urllib.request.urlopen(url).read()
     string_dump = dump.decode('utf-8')
-
-    regex_record = '\{(.*?)\},'
-    records = re.findall(regex_record, string_dump)
     
-    regex_field = '^.*?:|,.*?:'
-    regex_data  = ':.*?,|:.*?$'
+    df_op = pd.DataFrame(columns=field_subset)
     
-    #One-off inspection to get the fields:
-    fields = re.findall(regex_field, records[0])
-    fields = [f.replace(':', '').replace('"', '').replace(',', '') for f in fields]
-    
-    if do_subset:
-        desired_indices = [fields.index(i) for i in field_subset]
-        fields = field_subset
-    
-    #Set up space to save time
-    df_op = pd.DataFrame(columns=fields, data=[['' for i in fields] for j in records])
-    
-    #Insert all data into frame
-    for i, r in enumerate(records):    
-        data  = re.findall(regex_data, r)
-        data  = [d.replace(':', '').replace('"', '').replace(',', '') for d in data]
+    for f in field_subset:
+        #Search directly for the fields of interest
+        regex_data = '\"{}\":.*?,|\"{}\":.*?$'.format(f, f)
+        data = re.findall(regex_data, string_dump)
         
-        #Save time by stripping out only the data we want
-        if do_subset:
-            data  = [data[i] for i in desired_indices]
+        #Remove rubbish
+        data  = [d.replace(f, '').replace(':', '').replace('"', '').replace(',', '') for d in data]
         
-        for j, f in enumerate(fields):
-            df_op.at[i, f] = data[j] 
+        #Push into data frame. This only works because the data is so clean. Previous line-by-line is more general. 
+        df_op[f] = data
     return df_op
 
 
 
-def cleanse_geometry(url_geometry, only_RGB=True, only_true_coords=True):
+def cleanse_geometry(url_geometry, field_subset, only_RGB=True, only_true_coords=True):
     '''
     Function cleanse aspects of the geometry data from the Reading Buses API
     Input:
