@@ -10,19 +10,14 @@ import urllib
 import re
 import numpy as np
 
-#def recover_times(url_times):
-#    '''
-#    Function to return timing information for a given service on a given day.
-#    '''
-#    return df_times
 
-
-def parse_url(url, field_subset):
+def parse_url(url, field_subset, do_subset):
     '''
     Function to obtain a dataframe of data from Reading Buses API dumps
     Input:
         url: a url, structured according to the API schema
         field_subset: an optional list containing a subset of fields to extract
+        do_subset: boolean which if true, will only return the fields in field_subset
     Returns:
         df_op: The dataframe of data contained in the raw dump file
     '''
@@ -39,7 +34,7 @@ def parse_url(url, field_subset):
     fields = re.findall(regex_field, records[0])
     fields = [f.replace(':', '').replace('"', '').replace(',', '') for f in fields]
     
-    if field_subset != 'ALL':
+    if do_subset:
         desired_indices = [fields.index(i) for i in field_subset]
         fields = field_subset
     
@@ -52,12 +47,13 @@ def parse_url(url, field_subset):
         data  = [d.replace(':', '').replace('"', '').replace(',', '') for d in data]
         
         #Save time by stripping out only the data we want
-        if field_subset != 'ALL':
+        if do_subset:
             data  = [data[i] for i in desired_indices]
         
         for j, f in enumerate(fields):
             df_op.at[i, f] = data[j] 
     return df_op
+
 
 
 def cleanse_geometry(url_geometry, only_RGB=True, only_true_coords=True):
@@ -72,7 +68,7 @@ def cleanse_geometry(url_geometry, only_RGB=True, only_true_coords=True):
         of stops, the route to which they belong etc. 
     '''
     #Obtain data
-    df_geometry = parse_url(url_geometry, 'ALL')
+    df_geometry = parse_url(url_geometry, [], False)
             
     #Coerce latitude and longitude to floats
     df_geometry['longitude'] = df_geometry['longitude'].astype(float) 
