@@ -12,22 +12,21 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 
 
-def visualise_route(df_tracker, service, track_journey, df_geometry):
+def visualise_route(df_tracker, service, track_route, df_geometry):
     '''
-    Function to colour code a route taken by a bus to visualise progress through it.
-    Base geometry has no indication of how a route is traversed, only that certain stations
-    are served by the route
+    Visualise progression through a route ("journey") on a given service
     Input:
-        service: string, indicating which bus "number" to visualise
-        route: string, the path through the service's stops which is being followed
-        df_geometry: dataframe, containing lat/longs, stoop id etc.        
+        df_tracker: dataframe of historic position data for a given service
+        service: string indicating the service being looked at
+        track_journey: sting indication the journey pattern of interest
+        df_geometry: dataframe, containing lat/longs, stop id etc.        
     Output:
         fig: matplotlib figure object 
         ax: matplotlib axes object
     '''
     
     #Pick out the journey of interest
-    df_journey = df_tracker.loc[df_tracker['JourneyPattern'] == track_journey][['JourneyPattern', 'Sequence', 'LocationCode']].reset_index(drop=True)
+    df_journey = df_tracker.loc[df_tracker['JourneyPattern'] == track_route][['JourneyPattern', 'Sequence', 'LocationCode']].reset_index(drop=True)
     df_journey.drop_duplicates(inplace=True)
 
     #Assign lat/long to each sequence value
@@ -66,10 +65,10 @@ def visualise_route(df_tracker, service, track_journey, df_geometry):
     #Label up
     ax.set_xlabel('Longitude / degrees')
     ax.set_ylabel('Latitude / degrees')
-    ax.set_title('Service: {} Journey Pattern: {}'.format(service, track_journey))
+    ax.set_title('Service: {} Journey Pattern: {}'.format(service, track_route))
     plt.tight_layout()
-    
     return fig, ax
+
 
 
 def parse_url(url, field_subset):
@@ -135,5 +134,4 @@ def cleanse_geometry(url_geometry, field_subset, only_RGB=True, only_true_coords
     #Choose "sensible" records only
     if only_true_coords:
         df_geometry= df_geometry.loc[(df_geometry['longitude'] != 0) & (df_geometry['latitude'] != 0)].reset_index(drop=True)
-        
     return df_geometry

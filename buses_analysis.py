@@ -29,7 +29,7 @@ do_tracking_subset = True
 track_service      = '16'
 track_journey      = 'JP134'
 date_start         = '2019-01-01'
-date_end           = '2019-01-01'
+date_end           = '2019-01-31'
 subset_tracking    = ['LocationCode', 'LiveJourneyId', 'JourneyId', 'ScheduledStartTime', 'JourneyPattern',
                       'Sequence', 'ScheduledArrivalTime', 'ArrivalTime']
 subset_geometry    = ["location_code", "bay_no", "description", "latitude", "longitude", "route_code", "operator_code",
@@ -93,11 +93,6 @@ df_final = pd.concat(list_tracking)
 
 
 
-#%%Visualise a journey from start to finish
-fig_j, ax_j = visualise_route(df_final, track_service, track_journey, df_geometry)
-
-
-
 #%% Cleanse
 df_final['Sequence']              = df_final['Sequence'].astype(int) 
 df_final['ScheduledStartTime']    = df_final['ScheduledStartTime'].apply(lambda x: pd.to_datetime(x, format='%Y-%m-%d %H%M%S', errors='coerce'))
@@ -109,23 +104,28 @@ df_final['arrival_delta']   = (df_final['ArrivalTime'] - df_final['ScheduledArri
 
 
 
-#%% Stats and plotting
-temporal_variance = df_final.groupby(['calendar_day', 'LocationCode']).agg({'arrival_delta':'mean'}).rename({'arrival_delta':'mean'}, axis=1).reset_index()
-journey_breakdown = temporal_variance.groupby('LocationCode')
+#%%Visualise a journey from start to finish
+fig_j, ax_j = visualise_route(df_final, track_service, track_journey, df_geometry)
 
-fig, ax = plt.subplots()
-for j in journey_breakdown:
-    j[1].sort_values(by='calendar_day', inplace=True)
+
+
+#%% Stats and plotting
+# temporal_variance = df_final.groupby(['calendar_day', 'LocationCode']).agg({'arrival_delta':'mean'}).rename({'arrival_delta':'mean'}, axis=1).reset_index()
+# journey_breakdown = temporal_variance.groupby('LocationCode')
+
+# fig, ax = plt.subplots()
+# for j in journey_breakdown:
+#     j[1].sort_values(by='calendar_day', inplace=True)
     
-    x = j[1]['calendar_day'].apply(lambda x: pd.to_datetime(x))
-    x  = matplotlib.dates.date2num(x)
+#     x = j[1]['calendar_day'].apply(lambda x: pd.to_datetime(x))
+#     x  = matplotlib.dates.date2num(x)
     
-    ax.plot_date(x, j[1]['mean'].values, label=j[0], marker='None', linestyle='-', alpha=0.15, c='red')
-ax.set_xlabel('Day index')
-ax.set_ylabel('Mean arrival delta / seconds')
-ax.set_xticks(desired_dates)
-ax.set_xticklabels(desired_dates)
-plt.xticks(rotation=90)
-plt.tight_layout()
+#     ax.plot_date(x, j[1]['mean'].values, label=j[0], marker='None', linestyle='-', alpha=0.15, c='red')
+# ax.set_xlabel('Day index')
+# ax.set_ylabel('Mean arrival delta / seconds')
+# ax.set_xticks(desired_dates)
+# ax.set_xticklabels(desired_dates)
+# plt.xticks(rotation=90)
+# plt.tight_layout()
     
     
