@@ -8,7 +8,7 @@ Various pieces of analysis for the Reading Buses datasets
 import pandas as pd
 import sys
 import matplotlib.pyplot as plt
-import matplotlib
+import os
 
 utils_dir = 'C:\\Users\\Alex White\\Documents\\GitHub\\reading_buses'
 if utils_dir not in sys.path:
@@ -26,6 +26,7 @@ url_services       = '{}/services?key={}'.format(api_base, api_key)
 only_RGB           = True
 only_valid_latlong = True
 do_tracking_subset = True
+save_journey_vis   = True
 track_service      = '16'
 track_journey      = 'JP134'
 date_start         = '2019-01-01'
@@ -104,10 +105,21 @@ df_final['arrival_delta']   = (df_final['ArrivalTime'] - df_final['ScheduledArri
 
 
 
-#%%Visualise a journey from start to finish
-fig_j, ax_j = visualise_route(df_final, track_service, track_journey, df_geometry)
-
-
+#%% Journey patterns
+if save_journey_vis:
+    vis_desc = track_service + '_' + date_start.replace('-', '') + '_' + date_end.replace('-', '')
+    vis_dir = os.path.join(utils_dir, 'figures', vis_desc)
+    
+    #Set up directory structure if needed
+    if not os.path.exists(vis_dir):
+        os.makedirs(vis_dir)
+    
+    #Visualise the journeys and save
+    for j in df_final.groupby('JourneyPattern'):
+        fig_j, ax_j = visualise_route(df_final, track_service, j[0], df_geometry)
+        plt.savefig(os.path.join(vis_dir, j[0] + '.png'))
+    
+    
 
 #%% Stats and plotting
 # temporal_variance = df_final.groupby(['calendar_day', 'LocationCode']).agg({'arrival_delta':'mean'}).rename({'arrival_delta':'mean'}, axis=1).reset_index()
