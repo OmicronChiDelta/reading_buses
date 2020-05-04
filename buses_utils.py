@@ -8,6 +8,68 @@ Functions to assist in analysing Reading Buses open source datasets
 import pandas as pd
 import urllib
 import re
+import matplotlib.pyplot as plt
+from matplotlib import cm
+
+
+def visualise_route(df_tracker, service, track_journey, df_geometry):
+    '''
+    Function to colour code a route taken by a bus to visualise progress through it.
+    Base geometry has no indication of how a route is traversed, only that certain stations
+    are served by the route
+    Input:
+        service: string, indicating which bus "number" to visualise
+        route: string, the path through the service's stops which is being followed
+        df_geometry: dataframe, containing lat/longs, stoop id etc.        
+    Output:
+        fig: matplotlib figure object 
+        ax: matplotlib axes object
+    '''
+    
+    #Pick out the journey of interest
+    df_journey = df_tracker.loc[df_tracker['JourneyPattern'] == track_journey][['JourneyPattern', 'Sequence', 'LocationCode']].reset_index(drop=True)
+    df_journey.drop_duplicates(inplace=True)
+
+    #Assign lat/long to each sequence value
+    df_vis = df_journey.merge(df_geometry[['location_code', 'latitude', 'longitude']], how='left', left_on='LocationCode', right_on='location_code')
+    df_vis.drop_duplicates(inplace=True)
+    df_vis.sort_values(by='Sequence', ascending=True)
+    df_vis['Sequence'] = df_vis['Sequence'].astype(int)
+    
+    #Red is the start, green is the end
+    cmap = cm.get_cmap('RdYlGn')
+    
+    fig, ax = plt.subplots()
+    
+    #Show the basic route
+    ax.plot(df_vis['longitude'].values, 
+            df_vis['latitude'].values, 
+            ls='-', 
+            c='k',
+            alpha=0.25,
+            zorder=0)
+    
+    #Use colour to indicate progress
+    stop_ax = ax.scatter(df_vis['longitude'].values, 
+               df_vis['latitude'].values, 
+               c=df_vis['Sequence'].values, 
+               cmap=cmap, 
+               marker='o',
+               s=50,
+               edgecolor='k',
+               zorder=1)
+    
+    #Add colour bar
+    cbar = plt.colorbar(stop_ax, ticks=[df_vis['Sequence'].min(), df_vis['Sequence'].max()])
+    cbar.ax.set_yticklabels(['Start', 'End'])
+    
+    #Label up
+    ax.set_xlabel('Longitude / degrees')
+    ax.set_ylabel('Latitude / degrees')
+    ax.set_title('Service: {} Journey Pattern: {}'.format(service, track_journey))
+    plt.tight_layout()
+    
+    return fig, ax
 
 
 def parse_url(url, field_subset):
