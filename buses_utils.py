@@ -12,9 +12,12 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 
 
-def visualise_route(df_tracker, service, track_route, df_geometry):
+def visualise_route(df_route, service, track_route, df_geometry):
     '''
     Visualise progression through a route ("journey") on a given service
+    Recommend against using this for the time being, as JourneyPattern is not as
+    clean as it first appears. Sometimes, several routes pop up in the same JP - 
+    other times, many JPs actually correspond to the same route through the network
     Input:
         df_tracker: dataframe of historic position data for a given service
         service: string indicating the service being looked at
@@ -26,11 +29,11 @@ def visualise_route(df_tracker, service, track_route, df_geometry):
     '''
     
     #Pick out the journey of interest
-    df_journey = df_tracker.loc[df_tracker['JourneyPattern'] == track_route][['JourneyPattern', 'Sequence', 'LocationCode']].reset_index(drop=True)
-    df_journey.drop_duplicates(inplace=True)
+    df_route = df_route[['JourneyPattern', 'Sequence', 'LocationCode']].reset_index(drop=True)
+    df_route.drop_duplicates(inplace=True)
 
     #Assign lat/long to each sequence value
-    df_vis = df_journey.merge(df_geometry[['location_code', 'latitude', 'longitude']], how='left', left_on='LocationCode', right_on='location_code')
+    df_vis = df_route.merge(df_geometry[['location_code', 'latitude', 'longitude']], how='left', left_on='LocationCode', right_on='location_code')
     df_vis.drop_duplicates(inplace=True)
     df_vis.sort_values(by='Sequence', ascending=True)
     df_vis['Sequence'] = df_vis['Sequence'].astype(int)
